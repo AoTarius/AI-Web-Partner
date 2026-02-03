@@ -31,18 +31,6 @@ export function ChatHeader({ currentModel, onModelChange, isSidebarOpen, onToggl
             </Card>
           </motion.div>
         </div>
-
-        {/* 右侧：上下文信息 */}
-        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-1">
-            <span>上下文:</span>
-            <span className="font-mono text-violet-600 dark:text-violet-400">8K</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>消息数:</span>
-            <span className="font-mono text-fuchsia-600 dark:text-fuchsia-400">12</span>
-          </div>
-        </div>
       </div>
     </div>
   )

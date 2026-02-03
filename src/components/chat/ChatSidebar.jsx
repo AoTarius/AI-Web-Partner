@@ -132,24 +132,6 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
             </motion.div>
           ))}
         </div>
-
-        {/* 底部功能按钮 */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
-              <History className="h-4 w-4" />
-              <span className="text-xs">历史</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
-              <Search className="h-4 w-4" />
-              <span className="text-xs">搜索</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
-              <Settings className="h-4 w-4" />
-              <span className="text-xs">设置</span>
-            </Button>
-          </div>
-        </div>
       </div>
     </motion.aside>
   )
