@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useRef, useEffect } from 'react'
 
-export function MessageList({ messages }) {
+export function MessageList({ messages, isLoading }) {
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -15,6 +15,17 @@ export function MessageList({ messages }) {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600 mx-auto"></div>
+          <p className="text-slate-600 dark:text-slate-400">加载中...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (messages.length === 0) {
     return (

@@ -3,19 +3,52 @@ import { MessageSquarePlus, History, Search, Settings, Trash2, Edit3 } from 'luc
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getConversations, deleteConversation } from '@/lib/api'
 
-export function ChatSidebar({ isOpen, onToggle }) {
+export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, currentConversationId }) {
   const [hoveredItemId, setHoveredItemId] = useState(null)
+  const [conversations, setConversations] = useState([])
 
-  // 模拟对话历史数据
-  const conversations = [
-    { id: 1, title: 'React 性能优化技巧', timestamp: '2小时前', isActive: true },
-    { id: 2, title: 'TailwindCSS 最佳实践', timestamp: '昨天' },
-    { id: 3, title: 'JavaScript 异步编程', timestamp: '2天前' },
-    { id: 4, title: 'TypeScript 类型系统', timestamp: '3天前' },
-    { id: 5, title: 'Vite 构建优化', timestamp: '1周前' },
-  ]
+  // 获取对话列表
+  const loadConversations = async () => {
+    try {
+      const data = await getConversations()
+      setConversations(data)
+    } catch (error) {
+      console.error('加载对话列表失败:', error)
+    }
+  }
+
+  // 删除对话
+  const handleDelete = async (id, e) => {
+    e.stopPropagation()
+    try {
+      await deleteConversation(id)
+      await loadConversations()
+    } catch (error) {
+      console.error('删除对话失败:', error)
+    }
+  }
+
+  // 格式化时间
+  const formatTime = (timestamp) => {
+    const now = new Date()
+    const date = new Date(timestamp)
+    const diff = Math.floor((now - date) / 1000) // 秒
+
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+    if (diff < 604800) return `${Math.floor(diff / 86400)}天前`
+    return date.toLocaleDateString()
+  }
+
+  useEffect(() => {
+    loadConversations()
+    // 每5秒刷新一次列表
+    const interval = setInterval(loadConversations, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <motion.aside
@@ -31,6 +64,7 @@ export function ChatSidebar({ isOpen, onToggle }) {
         {/* 顶部操作区 */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-800">
           <Button
+            onClick={onNewConversation}
             variant="default"
             className="w-full gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700"
           >
@@ -53,9 +87,10 @@ export function ChatSidebar({ isOpen, onToggle }) {
               className="relative"
             >
               <Card
+                onClick={() => onSelectConversation(conv.id)}
                 className={cn(
                   'p-3 cursor-pointer transition-all border',
-                  conv.isActive
+                  currentConversationId === conv.id
                     ? 'bg-violet-50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-800'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-900 border-transparent'
                 )}
@@ -66,7 +101,7 @@ export function ChatSidebar({ isOpen, onToggle }) {
                       {conv.title}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {conv.timestamp}
+                      {formatTime(conv.updated_at)}
                     </p>
                   </div>
                   {hoveredItemId === conv.id && (
@@ -83,6 +118,7 @@ export function ChatSidebar({ isOpen, onToggle }) {
                         <Edit3 className="h-3 w-3" />
                       </Button>
                       <Button
+                        onClick={(e) => handleDelete(conv.id, e)}
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
