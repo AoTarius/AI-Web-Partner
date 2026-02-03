@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Palette, Home } from 'lucide-react'
+import { Palette, Home, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function Header() {
   const location = useLocation()
   const isDesignSystem = location.pathname === '/design-system'
+  const isHome = location.pathname === '/'
 
   return (
     <motion.header
@@ -31,12 +32,22 @@ export function Header() {
         <nav className="flex items-center gap-4">
           <Link to="/">
             <Button
-              variant={!isDesignSystem ? 'default' : 'ghost'}
+              variant={isHome ? 'default' : 'ghost'}
               size="sm"
               className="gap-2"
             >
               <Home className="h-4 w-4" />
               Home
+            </Button>
+          </Link>
+          <Link to="/chat">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-violet-200 hover:bg-violet-50 dark:border-violet-800 dark:hover:bg-violet-950"
+            >
+              <MessageSquare className="h-4 w-4" />
+              AI对话
             </Button>
           </Link>
           <Link to="/design-system">

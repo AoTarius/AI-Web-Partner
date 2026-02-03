@@ -1,0 +1,120 @@
+import { motion } from 'framer-motion'
+import { MessageSquarePlus, History, Search, Settings, Trash2, Edit3 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import { useState } from 'react'
+
+export function ChatSidebar({ isOpen, onToggle }) {
+  const [hoveredItemId, setHoveredItemId] = useState(null)
+
+  // 模拟对话历史数据
+  const conversations = [
+    { id: 1, title: 'React 性能优化技巧', timestamp: '2小时前', isActive: true },
+    { id: 2, title: 'TailwindCSS 最佳实践', timestamp: '昨天' },
+    { id: 3, title: 'JavaScript 异步编程', timestamp: '2天前' },
+    { id: 4, title: 'TypeScript 类型系统', timestamp: '3天前' },
+    { id: 5, title: 'Vite 构建优化', timestamp: '1周前' },
+  ]
+
+  return (
+    <motion.aside
+      animate={{
+        width: isOpen ? 320 : 0,
+        opacity: isOpen ? 1 : 0,
+      }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="flex-shrink-0 border-r border-slate-200 bg-white overflow-hidden dark:border-slate-800 dark:bg-slate-950"
+    >
+      {/* 内容容器 - 固定宽度 320px */}
+      <div className="w-80 h-full flex flex-col">
+        {/* 顶部操作区 */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+          <Button
+            variant="default"
+            className="w-full gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700"
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            新对话
+          </Button>
+        </div>
+
+        {/* 对话历史列表 */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
+            对话历史
+          </h3>
+          {conversations.map((conv) => (
+            <motion.div
+              key={conv.id}
+              whileHover={{ scale: 1.02 }}
+              onHoverStart={() => setHoveredItemId(conv.id)}
+              onHoverEnd={() => setHoveredItemId(null)}
+              className="relative"
+            >
+              <Card
+                className={cn(
+                  'p-3 cursor-pointer transition-all border',
+                  conv.isActive
+                    ? 'bg-violet-50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-800'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-900 border-transparent'
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
+                      {conv.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {conv.timestamp}
+                    </p>
+                  </div>
+                  {hoveredItemId === conv.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex gap-1"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 hover:bg-slate-200 dark:hover:bg-slate-800"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* 底部功能按钮 */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-3 gap-2">
+            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
+              <History className="h-4 w-4" />
+              <span className="text-xs">历史</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
+              <Search className="h-4 w-4" />
+              <span className="text-xs">搜索</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2 flex-col h-auto py-3">
+              <Settings className="h-4 w-4" />
+              <span className="text-xs">设置</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.aside>
+  )
+}
