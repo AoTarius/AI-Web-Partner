@@ -1,14 +1,17 @@
 import { motion } from 'framer-motion'
-import { MessageSquarePlus, History, Search, Settings, Trash2, Edit3 } from 'lucide-react'
+import { MessageSquarePlus, History, Search, Settings, Trash2, Edit3, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { useState, useEffect } from 'react'
-import { getConversations, deleteConversation } from '@/lib/api'
+import { useState, useEffect, useRef } from 'react'
+import { getConversations, deleteConversation, updateConversationTitle } from '@/lib/api'
 
 export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, currentConversationId }) {
   const [hoveredItemId, setHoveredItemId] = useState(null)
   const [conversations, setConversations] = useState([])
+  const [editingId, setEditingId] = useState(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const inputRef = useRef(null)
 
   // 获取对话列表
   const loadConversations = async () => {
@@ -28,6 +31,44 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
       await loadConversations()
     } catch (error) {
       console.error('删除对话失败:', error)
+    }
+  }
+
+  // 开始编辑
+  const handleStartEdit = (conv, e) => {
+    e.stopPropagation()
+    setEditingId(conv.id)
+    setEditingTitle(conv.title)
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  // 保存编辑
+  const handleSaveEdit = async (id) => {
+    if (!editingTitle.trim()) {
+      setEditingId(null)
+      return
+    }
+    try {
+      await updateConversationTitle(id, editingTitle.trim())
+      await loadConversations()
+      setEditingId(null)
+    } catch (error) {
+      console.error('重命名对话失败:', error)
+    }
+  }
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditingTitle('')
+  }
+
+  // 处理键盘事件
+  const handleKeyDown = (e, id) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit(id)
+    } else if (e.key === 'Escape') {
+      handleCancelEdit()
     }
   }
 
@@ -87,9 +128,10 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
               className="relative"
             >
               <Card
-                onClick={() => onSelectConversation(conv.id)}
+                onClick={() => editingId !== conv.id && onSelectConversation(conv.id)}
                 className={cn(
-                  'p-3 cursor-pointer transition-all border',
+                  'p-3 transition-all border',
+                  editingId !== conv.id && 'cursor-pointer',
                   currentConversationId === conv.id
                     ? 'bg-violet-50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-800'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-900 border-transparent'
@@ -97,20 +139,59 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
-                      {conv.title}
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {formatTime(conv.updated_at)}
-                    </p>
+                    {editingId === conv.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, conv.id)}
+                          className="flex-1 text-sm font-medium bg-white dark:bg-slate-800 border border-violet-300 dark:border-violet-700 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSaveEdit(conv.id)
+                          }}
+                          className="h-6 w-6 hover:bg-green-100 hover:text-green-600 dark:hover:bg-green-950"
+                        >
+                          <Check className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCancelEdit()
+                          }}
+                          className="h-6 w-6 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">
+                          {conv.title}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          {formatTime(conv.updated_at)}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  {hoveredItemId === conv.id && (
+                  {hoveredItemId === conv.id && editingId !== conv.id && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex gap-1"
                     >
                       <Button
+                        onClick={(e) => handleStartEdit(conv, e)}
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 hover:bg-slate-200 dark:hover:bg-slate-800"

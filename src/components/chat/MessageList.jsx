@@ -52,12 +52,17 @@ export function MessageList({ messages, isLoading }) {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-      {messages.map((message, index) => (
-        <motion.div
-          key={message.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1 }}
+      {messages.map((message, index) => {
+        // 只对最新5条消息使用动画，历史消息直接显示
+        const isRecentMessage = index >= messages.length - 5
+        const animationDelay = isRecentMessage ? (index - (messages.length - 5)) * 0.1 : 0
+
+        return (
+          <motion.div
+            key={message.id}
+            initial={{ opacity: isRecentMessage ? 0 : 1, y: isRecentMessage ? 20 : 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: animationDelay }}
           className={cn(
             'flex gap-4',
             message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -127,8 +132,9 @@ export function MessageList({ messages, isLoading }) {
               </div>
             </div>
           )}
-        </motion.div>
-      ))}
+          </motion.div>
+        )
+      })}
       <div ref={messagesEndRef} />
     </div>
   )
