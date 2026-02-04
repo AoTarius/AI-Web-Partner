@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export function MessageList({ messages, isLoading }) {
   const messagesEndRef = useRef(null)
@@ -16,17 +18,19 @@ export function MessageList({ messages, isLoading }) {
     scrollToBottom()
   }, [messages])
 
-  if (isLoading) {
+  // 切换对话时的加载状态（消息为空且正在加载）
+  if (messages.length === 0 && isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600 mx-auto"></div>
-          <p className="text-slate-600 dark:text-slate-400">加载中...</p>
+          <p className="text-slate-600 dark:text-slate-400">加载对话中...</p>
         </div>
       </div>
     )
   }
 
+  // 空对话欢迎界面
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -85,15 +89,24 @@ export function MessageList({ messages, isLoading }) {
                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
               )}
             >
-              <p className={cn(
-                'text-sm leading-relaxed whitespace-pre-wrap',
-                message.role === 'assistant' && 'text-slate-900 dark:text-slate-50'
-              )}>
-                {message.content}
-              </p>
+              {message.role === 'user' ? (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {message.content}
+                </p>
+              ) : (
+                <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-50 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-headings:my-3 prose-headings:font-semibold">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                  {/* 流式消息显示打字光标 */}
+                  {message.id === 'streaming' && (
+                    <span className="inline-block w-2 h-4 ml-0.5 bg-violet-500 animate-pulse align-middle" />
+                  )}
+                </div>
+              )}
             </Card>
 
-            {message.role === 'assistant' && (
+            {message.role === 'assistant' && message.id !== 'streaming' && (
               <div className="flex items-center gap-2 px-2">
                 <Button
                   variant="ghost"

@@ -8,14 +8,14 @@ import {
   createMessage,
   getMessages,
   getConversations,
-  sendChatMessage,
+  sendChatMessageStream,
 } from '@/lib/api'
 
 export function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [messages, setMessages] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
-  const [currentModel, setCurrentModel] = useState('Claude Sonnet 4.5')
+  const [currentModel, setCurrentModel] = useState('DeepSeek v1')
   const [isLoading, setIsLoading] = useState(false)
   const initialized = useRef(false)
 
@@ -61,18 +61,49 @@ export function ChatPage() {
       const userMessage = await createMessage(conversationId, 'user', content)
       setMessages((prev) => [...prev, userMessage])
 
-      // 调用 DeepSeek API 获取回复
-      const aiResponse = await sendChatMessage(conversationId, content)
+      // 创建一个临时的 AI 消息占位符
+      const tempAiMessage = {
+        id: 'streaming',
+        conversation_id: conversationId,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, tempAiMessage])
 
-      // 保存 AI 回复到数据库
+      // 流式获取 AI 回复
+      const finalContent = await sendChatMessageStream(
+        conversationId,
+        content,
+        (partialContent) => {
+          // 实时更新消息内容
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === 'streaming'
+                ? { ...msg, content: partialContent }
+                : msg
+            )
+          )
+        }
+      )
+
+      // 保存完整的 AI 回复到数据库
       const savedAiMessage = await createMessage(
         conversationId,
         'assistant',
-        aiResponse.content
+        finalContent
       )
-      setMessages((prev) => [...prev, savedAiMessage])
+
+      // 用数据库返回的消息替换临时消息
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === 'streaming' ? savedAiMessage : msg
+        )
+      )
     } catch (error) {
       console.error('发送消息失败:', error)
+      // 移除临时消息
+      setMessages((prev) => prev.filter((msg) => msg.id !== 'streaming'))
       alert('发送消息失败，请检查 API 配置')
     } finally {
       setIsLoading(false)

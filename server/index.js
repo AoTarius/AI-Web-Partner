@@ -115,25 +115,8 @@ app.post('/api/conversations/:id/messages', (req, res) => {
 
 // ==================== AI 聊天 API ====================
 
-// 调用 DeepSeek API
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { conversationId, message } = req.body
-
-    if (!message) {
-      return res.status(400).json({ error: '消息内容不能为空' })
-    }
-
-    // 获取对话历史
-    const history = conversationId
-      ? messageQueries.getByConversation.all(conversationId)
-      : []
-
-    // 构建发送给 DeepSeek 的消息数组
-    const messages = [
-      {
-  role: 'system',
-  content: `你是一位经验丰富的家常菜厨师达人，擅长根据实际情况为家庭定制美味又实用的菜谱。
+// 系统提示词
+const SYSTEM_PROMPT = `你是一位经验丰富的家常菜厨师达人，擅长根据实际情况为家庭定制美味又实用的菜谱。
 
 核心职责：
 当用户询问"早饭/午饭/晚饭吃什么"时，你需要按照以下流程工作：
@@ -200,20 +183,120 @@ app.post('/api/chat', async (req, res) => {
 - 如果用户提供的信息不完整，补充询问缺失的部分
 - 每道菜的步骤要编号，方便用户边看边做
 - 当用户要求更换菜品时，保持菜单的整体协调性和营养均衡`
-},
-      // 添加历史消息（最近10条）
+
+// 流式调用 DeepSeek API (SSE)
+app.post('/api/chat/stream', async (req, res) => {
+  try {
+    const { conversationId, message } = req.body
+
+    if (!message) {
+      return res.status(400).json({ error: '消息内容不能为空' })
+    }
+
+    // 设置 SSE 响应头
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+
+    // 获取对话历史
+    const history = conversationId
+      ? messageQueries.getByConversation.all(conversationId)
+      : []
+
+    // 构建消息数组
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
       ...history.slice(-10).map(msg => ({
         role: msg.role,
         content: msg.content
       })),
-      // 添加当前用户消息
-      {
-        role: 'user',
-        content: message
-      }
+      { role: 'user', content: message }
     ]
 
-    // 调用 DeepSeek API
+    // 调用 DeepSeek API（流式）
+    const response = await fetch(`${process.env.DEEPSEEK_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: 0.7,
+        stream: true  // 启用流式输出
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('DeepSeek API 错误:', error)
+      res.write(`data: ${JSON.stringify({ error: 'API 调用失败' })}\n\n`)
+      res.end()
+      return
+    }
+
+    // 读取流式响应并转发给客户端
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') {
+            res.write('data: [DONE]\n\n')
+          } else {
+            try {
+              const parsed = JSON.parse(data)
+              const content = parsed.choices?.[0]?.delta?.content
+              if (content) {
+                res.write(`data: ${JSON.stringify({ content })}\n\n`)
+              }
+            } catch {
+              // 忽略解析错误
+            }
+          }
+        }
+      }
+    }
+
+    res.end()
+  } catch (error) {
+    console.error('AI 聊天失败:', error)
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`)
+    res.end()
+  }
+})
+
+// 非流式调用（保留兼容）
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { conversationId, message } = req.body
+
+    if (!message) {
+      return res.status(400).json({ error: '消息内容不能为空' })
+    }
+
+    const history = conversationId
+      ? messageQueries.getByConversation.all(conversationId)
+      : []
+
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...history.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: message }
+    ]
+
     const response = await fetch(`${process.env.DEEPSEEK_API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -236,7 +319,6 @@ app.post('/api/chat', async (req, res) => {
     const data = await response.json()
     const aiMessage = data.choices[0].message.content
 
-    // 返回 AI 回复
     res.json({
       content: aiMessage,
       role: 'assistant'

@@ -67,3 +67,51 @@ export async function sendChatMessage(conversationId, message) {
   if (!response.ok) throw new Error('发送聊天消息失败')
   return response.json()
 }
+
+// 流式发送消息
+export async function sendChatMessageStream(conversationId, message, onChunk) {
+  const response = await fetch(`${API_BASE}/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId, message }),
+  })
+
+  if (!response.ok) throw new Error('发送聊天消息失败')
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let fullContent = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    const chunk = decoder.decode(value)
+    const lines = chunk.split('\n')
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6)
+        if (data === '[DONE]') {
+          return fullContent
+        }
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.error) {
+            throw new Error(parsed.error)
+          }
+          if (parsed.content) {
+            fullContent += parsed.content
+            onChunk(fullContent)
+          }
+        } catch (e) {
+          if (e.message !== 'Unexpected end of JSON input') {
+            console.error('解析 SSE 数据失败:', e)
+          }
+        }
+      }
+    }
+  }
+
+  return fullContent
+}
