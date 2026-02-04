@@ -332,8 +332,51 @@ app.post('/api/chat', async (req, res) => {
   }
 })
 
+// 生成对话标题
+app.post('/api/chat/title', async (req, res) => {
+  try {
+    const { message } = req.body
+
+    if (!message) {
+      return res.status(400).json({ error: '消息内容不能为空' })
+    }
+
+    const response = await fetch(`${process.env.DEEPSEEK_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: '根据用户的第一条消息，生成一个简短的对话标题（不超过15个字）。只输出标题本身，不要加引号或其他内容。'
+          },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 50
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('生成标题失败')
+    }
+
+    const data = await response.json()
+    const title = data.choices[0].message.content.trim()
+
+    res.json({ title })
+  } catch (error) {
+    console.error('生成标题失败:', error)
+    res.status(500).json({ error: '生成标题失败' })
+  }
+})
+
 // 健康检查
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'API 服务运行正常' })
 })
 

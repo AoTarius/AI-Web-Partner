@@ -6,11 +6,12 @@ import { cn } from '@/lib/utils'
 import { useState, useEffect, useRef } from 'react'
 import { getConversations, deleteConversation, updateConversationTitle } from '@/lib/api'
 
-export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, currentConversationId }) {
+export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, onDeleteConversation, currentConversationId }) {
   const [hoveredItemId, setHoveredItemId] = useState(null)
   const [conversations, setConversations] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const inputRef = useRef(null)
 
   // 获取对话列表
@@ -23,15 +24,36 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
     }
   }
 
-  // 删除对话
-  const handleDelete = async (id, e) => {
+  // 请求删除对话（显示确认按钮）
+  const handleRequestDelete = (id, e) => {
+    e.stopPropagation()
+    setConfirmDeleteId(id)
+  }
+
+  // 确认删除对话
+  const handleConfirmDelete = async (id, e) => {
     e.stopPropagation()
     try {
+      const isCurrentConversation = id === currentConversationId
       await deleteConversation(id)
-      await loadConversations()
+      const updatedConversations = await getConversations()
+      setConversations(updatedConversations)
+      setConfirmDeleteId(null)
+
+      // 如果删除的是当前对话，通知父组件切换
+      if (isCurrentConversation && onDeleteConversation) {
+        const nextConversation = updatedConversations[0] || null
+        onDeleteConversation(nextConversation?.id || null)
+      }
     } catch (error) {
       console.error('删除对话失败:', error)
     }
+  }
+
+  // 取消删除
+  const handleCancelDelete = (e) => {
+    e.stopPropagation()
+    setConfirmDeleteId(null)
   }
 
   // 开始编辑
@@ -184,7 +206,31 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
                       </>
                     )}
                   </div>
-                  {hoveredItemId === conv.id && editingId !== conv.id && (
+                  {confirmDeleteId === conv.id ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex gap-1 items-center"
+                    >
+                      <span className="text-xs text-red-500 mr-1">删除?</span>
+                      <Button
+                        onClick={(e) => handleConfirmDelete(conv.id, e)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-red-100 text-red-600 dark:hover:bg-red-950"
+                      >
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        onClick={handleCancelDelete}
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-slate-200 dark:hover:bg-slate-800"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </motion.div>
+                  ) : hoveredItemId === conv.id && editingId !== conv.id && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -199,7 +245,7 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
                         <Edit3 className="h-3 w-3" />
                       </Button>
                       <Button
-                        onClick={(e) => handleDelete(conv.id, e)}
+                        onClick={(e) => handleRequestDelete(conv.id, e)}
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"

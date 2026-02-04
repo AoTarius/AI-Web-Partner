@@ -98,10 +98,6 @@ export function MessageList({ messages, isLoading }) {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {message.content}
                   </ReactMarkdown>
-                  {/* 流式消息显示打字光标 */}
-                  {message.id === 'streaming' && (
-                    <span className="inline-block w-2 h-4 ml-0.5 bg-violet-500 animate-pulse align-middle" />
-                  )}
                 </div>
               )}
             </Card>

@@ -57,15 +57,17 @@ export function Hero() {
           </p>
 
           <div className="flex items-center justify-center gap-4">
-            <Link to="/design-system">
+            <Link to="/chat">
               <Button size="lg" className="gap-2">
-                查看设计系统
+                开始对话
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline">
-              了解更多
-            </Button>
+            <Link to="/design-system">
+              <Button size="lg" variant="outline">
+                查看设计系统
+              </Button>
+            </Link>
           </div>
         </motion.div>
 

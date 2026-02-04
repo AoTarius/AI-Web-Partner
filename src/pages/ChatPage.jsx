@@ -9,6 +9,8 @@ import {
   getMessages,
   getConversations,
   sendChatMessageStream,
+  generateTitle,
+  updateConversationTitle,
 } from '@/lib/api'
 
 export function ChatPage() {
@@ -44,14 +46,37 @@ export function ChatPage() {
     }
   }
 
+  // 处理对话删除后的切换
+  const handleDeleteConversation = async (nextConversationId) => {
+    if (nextConversationId) {
+      // 切换到下一个对话
+      try {
+        setCurrentConversationId(nextConversationId)
+        const msgs = await getMessages(nextConversationId)
+        setMessages(msgs)
+      } catch (error) {
+        console.error('加载消息失败:', error)
+      }
+    } else {
+      // 没有对话了，清空状态
+      setCurrentConversationId(null)
+      setMessages([])
+    }
+  }
+
   // 发送消息
   const handleSendMessage = async (content) => {
     // 如果没有当前对话，先创建一个
     let conversationId = currentConversationId
+    let isFirstMessage = false
     if (!conversationId) {
       const conversation = await createConversation('新对话')
       conversationId = conversation.id
       setCurrentConversationId(conversationId)
+      isFirstMessage = true
+    } else {
+      // 检查是否是第一条消息
+      isFirstMessage = messages.length === 0
     }
 
     try {
@@ -100,6 +125,16 @@ export function ChatPage() {
           msg.id === 'streaming' ? savedAiMessage : msg
         )
       )
+
+      // 如果是第一条消息，自动生成对话标题
+      if (isFirstMessage) {
+        try {
+          const { title } = await generateTitle(content)
+          await updateConversationTitle(conversationId, title)
+        } catch (error) {
+          console.error('生成标题失败:', error)
+        }
+      }
     } catch (error) {
       console.error('发送消息失败:', error)
       // 移除临时消息
@@ -143,6 +178,7 @@ export function ChatPage() {
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         onNewConversation={handleNewConversation}
         onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
         currentConversationId={currentConversationId}
       />
 

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { Menu, ChevronDown, Bot } from 'lucide-react'
+import { Menu, ChevronDown, Bot, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Link } from 'react-router-dom'
 
 export function ChatHeader({ currentModel, onModelChange, isSidebarOpen, onToggleSidebar }) {
   return (
@@ -31,6 +32,17 @@ export function ChatHeader({ currentModel, onModelChange, isSidebarOpen, onToggl
             </Card>
           </motion.div>
         </div>
+
+        {/* 右侧：返回主页按钮 */}
+        <Link to="/">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 hover:bg-violet-100 hover:text-violet-600 dark:hover:bg-violet-950"
+          >
+            <Home className="h-5 w-5" />
+          </Button>
+        </Link>
       </div>
     </div>
   )

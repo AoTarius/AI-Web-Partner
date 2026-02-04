@@ -68,6 +68,17 @@ export async function sendChatMessage(conversationId, message) {
   return response.json()
 }
 
+// 生成对话标题
+export async function generateTitle(message) {
+  const response = await fetch(`${API_BASE}/chat/title`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  })
+  if (!response.ok) throw new Error('生成标题失败')
+  return response.json()
+}
+
 // 流式发送消息
 export async function sendChatMessageStream(conversationId, message, onChunk) {
   const response = await fetch(`${API_BASE}/chat/stream`, {
