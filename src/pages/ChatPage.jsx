@@ -3,7 +3,13 @@ import { ChatSidebar } from '@/components/chat/ChatSidebar'
 import { ChatHeader } from '@/components/chat/ChatHeader'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
-import { createConversation, createMessage, getMessages, getConversations } from '@/lib/api'
+import {
+  createConversation,
+  createMessage,
+  getMessages,
+  getConversations,
+  sendChatMessage,
+} from '@/lib/api'
 
 export function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -49,21 +55,27 @@ export function ChatPage() {
     }
 
     try {
+      setIsLoading(true)
+
       // 创建用户消息
       const userMessage = await createMessage(conversationId, 'user', content)
       setMessages((prev) => [...prev, userMessage])
 
-      // 模拟AI回复（实际项目中这里会调用 AI API）
-      setTimeout(async () => {
-        const aiResponse = await createMessage(
-          conversationId,
-          'assistant',
-          '这是一个模拟的AI回复。实际项目中，这里会调用 AI API。'
-        )
-        setMessages((prev) => [...prev, aiResponse])
-      }, 1000)
+      // 调用 DeepSeek API 获取回复
+      const aiResponse = await sendChatMessage(conversationId, content)
+
+      // 保存 AI 回复到数据库
+      const savedAiMessage = await createMessage(
+        conversationId,
+        'assistant',
+        aiResponse.content
+      )
+      setMessages((prev) => [...prev, savedAiMessage])
     } catch (error) {
       console.error('发送消息失败:', error)
+      alert('发送消息失败，请检查 API 配置')
+    } finally {
+      setIsLoading(false)
     }
   }
 

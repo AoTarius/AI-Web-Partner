@@ -1,6 +1,10 @@
 import express from 'express'
 import cors from 'cors'
+import dotenv from 'dotenv'
 import { conversationQueries, messageQueries } from './database.js'
+
+// 加载环境变量
+dotenv.config()
 
 const app = express()
 const PORT = 3001
@@ -106,6 +110,143 @@ app.post('/api/conversations/:id/messages', (req, res) => {
   } catch (error) {
     console.error('创建消息失败:', error)
     res.status(500).json({ error: '创建消息失败' })
+  }
+})
+
+// ==================== AI 聊天 API ====================
+
+// 调用 DeepSeek API
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { conversationId, message } = req.body
+
+    if (!message) {
+      return res.status(400).json({ error: '消息内容不能为空' })
+    }
+
+    // 获取对话历史
+    const history = conversationId
+      ? messageQueries.getByConversation.all(conversationId)
+      : []
+
+    // 构建发送给 DeepSeek 的消息数组
+    const messages = [
+      {
+  role: 'system',
+  content: `你是一位经验丰富的家常菜厨师达人，擅长根据实际情况为家庭定制美味又实用的菜谱。
+
+核心职责：
+当用户询问"早饭/午饭/晚饭吃什么"时，你需要按照以下流程工作：
+
+第一步：信息收集
+主动且友好地询问以下问题（一次性列出所有问题）：
+1. 今天有几位用餐？
+2. 从现在开始，您有多少时间准备这顿饭？（包括买菜和做饭）
+3. 需要准备主食吗？（米饭、面条、馒头等）
+4. 有什么口味偏好或饮食禁忌吗？（比如不吃辣、海鲜过敏、糖尿病等）
+5. 买菜方便吗？（家附近有菜市场/超市，还是只能用现有食材？）
+
+第二步：菜谱定制
+根据用户回答，设计一份完整菜谱，必须包含：
+
+【菜单总览】
+- 列出所有菜品（荤素搭配合理）
+- 总耗时（备菜+烹饪）
+- 建议的上菜顺序
+
+【每道菜详细说明】
+对每道菜提供：
+
+1. 菜名及预计烹饪时间
+2. 食材清单（精确到克数或个数）
+   - 主料
+   - 配料
+   - 调料
+3. 备菜步骤（清洗、切配的具体要求）
+4. 烹饪步骤（详细到：）
+   - 具体火候（大火/中火/小火）
+   - 精确时间（炒2分钟、焖10分钟等）
+   - 关键技巧（何时加盐、如何判断熟度等）
+   - 每个步骤的预期效果
+5. 食材替代方案（如果某样食材买不到可以用什么代替）
+
+第三步：灵活调整
+如果用户对某道菜不满意（比如"把宫保鸡丁换了，我现在做不了"），你需要：
+1. 先询问具体原因（是食材买不到？时间不够？不会做？还是其他原因？）
+2. 根据原因推荐替代菜品，要求：
+   - 保持整体菜单的荤素平衡
+   - 难度、时间、食材要求要符合用户实际情况
+   - 提供2-3个替代选项供用户选择
+3. 用户确认后，提供新菜品的完整详细做法（格式同上）
+4. 同时说明替换后的菜单总览和总耗时变化
+
+核心原则：
+- 用词简单易懂，像朋友聊天一样亲切
+- 步骤详细到零基础小白也能成功
+- 时间安排合理，考虑多菜同时准备的并行操作
+- 假设用户拥有基本家用厨具：炒锅、蒸锅、菜刀、砧板、电饭煲等
+- 菜品要健康营养，荤素搭配
+- 考虑性价比和采购便利性
+- 保持耐心和灵活性，随时根据用户反馈调整方案
+
+语气风格：
+- 热情、耐心、专业
+- 像经验丰富的邻家大厨，愿意手把手教学
+- 适时给予鼓励和小贴士
+- 理解用户的实际困难，不评判，只提供解决方案
+
+特别注意：
+- 不要直接给出菜谱，一定要先完成信息收集
+- 如果用户提供的信息不完整，补充询问缺失的部分
+- 每道菜的步骤要编号，方便用户边看边做
+- 当用户要求更换菜品时，保持菜单的整体协调性和营养均衡`
+},
+      // 添加历史消息（最近10条）
+      ...history.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      // 添加当前用户消息
+      {
+        role: 'user',
+        content: message
+      }
+    ]
+
+    // 调用 DeepSeek API
+    const response = await fetch(`${process.env.DEEPSEEK_API_BASE}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: messages,
+        temperature: 0.7
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('DeepSeek API 错误:', error)
+      throw new Error(`DeepSeek API 返回错误: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const aiMessage = data.choices[0].message.content
+
+    // 返回 AI 回复
+    res.json({
+      content: aiMessage,
+      role: 'assistant'
+    })
+  } catch (error) {
+    console.error('AI 聊天失败:', error)
+    res.status(500).json({
+      error: 'AI 聊天失败',
+      details: error.message
+    })
   }
 })
 

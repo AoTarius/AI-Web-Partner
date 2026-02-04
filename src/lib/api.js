@@ -55,3 +55,15 @@ export async function createMessage(conversationId, role, content) {
   if (!response.ok) throw new Error('创建消息失败')
   return response.json()
 }
+
+// ==================== AI 聊天 API ====================
+
+export async function sendChatMessage(conversationId, message) {
+  const response = await fetch(`${API_BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversationId, message }),
+  })
+  if (!response.ok) throw new Error('发送聊天消息失败')
+  return response.json()
+}
