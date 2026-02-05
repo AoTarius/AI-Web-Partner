@@ -17,9 +17,10 @@ export function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [messages, setMessages] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
-  const [currentModel, setCurrentModel] = useState('一日三餐顾问')
+  const [currentModel, setCurrentModel] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0)
+  const [modelError, setModelError] = useState(false)
   const initialized = useRef(false)
 
   // 创建新对话
@@ -67,8 +68,20 @@ export function ChatPage() {
     }
   }
 
+  // 处理模型选择
+  const handleModelChange = (model) => {
+    setCurrentModel(model)
+    setModelError(false)
+  }
+
   // 发送消息
   const handleSendMessage = async (content) => {
+    // 检查是否选择了模型
+    if (!currentModel) {
+      setModelError(true)
+      return
+    }
+
     // 如果没有当前对话，先创建一个
     let conversationId = currentConversationId
     let isFirstMessage = false
@@ -194,8 +207,10 @@ export function ChatPage() {
         {/* 对话区顶部 */}
         <ChatHeader
           currentModel={currentModel}
-          onModelChange={setCurrentModel}
+          onModelChange={handleModelChange}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          hasError={modelError}
+          onClearError={() => setModelError(false)}
         />
 
         {/* 消息列表 */}

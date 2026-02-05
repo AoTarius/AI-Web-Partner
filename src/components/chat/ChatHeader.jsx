@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, ChevronDown, Home, Utensils, Theater } from 'lucide-react'
+import { Menu, ChevronDown, Home, Utensils, Theater, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Link } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 
 const MODEL_OPTIONS = [
   { id: 'meal-advisor', name: '一日三餐顾问', icon: Utensils },
   { id: 'roleplay', name: '角色扮演模型', icon: Theater },
 ]
 
-export function ChatHeader({ currentModel, onModelChange, onToggleSidebar }) {
+export function ChatHeader({ currentModel, onModelChange, onToggleSidebar, hasError, onClearError }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
 
@@ -25,11 +26,11 @@ export function ChatHeader({ currentModel, onModelChange, onToggleSidebar }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const currentOption = MODEL_OPTIONS.find((opt) => opt.name === currentModel) || MODEL_OPTIONS[0]
-  const CurrentIcon = currentOption.icon
+  const currentOption = MODEL_OPTIONS.find((opt) => opt.name === currentModel)
+  const isModelSelected = currentOption !== undefined
 
   return (
-    <div className="border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+    <div className="relative z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
       <div className="flex items-center justify-between px-4 py-3">
         {/* 左侧：侧边栏切换按钮 */}
         <div className="flex items-center gap-3">
@@ -44,18 +45,45 @@ export function ChatHeader({ currentModel, onModelChange, onToggleSidebar }) {
 
           {/* 模型选择器 */}
           <div className="relative" ref={dropdownRef}>
-            <motion.div whileHover={{ scale: 1.02 }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              animate={hasError ? { x: [0, -4, 4, -4, 4, 0] } : {}}
+              transition={hasError ? { duration: 0.4 } : {}}
+            >
               <Card
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="px-4 py-2 border-slate-200 dark:border-slate-800 cursor-pointer hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+                onClick={() => {
+                  setIsDropdownOpen(!isDropdownOpen)
+                  if (hasError) onClearError?.()
+                }}
+                className={cn(
+                  'px-4 py-2 cursor-pointer transition-colors',
+                  hasError
+                    ? 'border-red-500 dark:border-red-500 ring-2 ring-red-200 dark:ring-red-900'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-violet-300 dark:hover:border-violet-700'
+                )}
               >
                 <div className="flex items-center gap-2">
-                  <CurrentIcon className="h-4 w-4 text-violet-600" />
-                  <span className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                    {currentModel}
-                  </span>
+                  {isModelSelected ? (
+                    <>
+                      <currentOption.icon className="h-4 w-4 text-violet-600" />
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-50">
+                        {currentModel}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-400 dark:text-slate-500">
+                        请选择模型
+                      </span>
+                    </>
+                  )}
                   <ChevronDown
-                    className={`h-4 w-4 text-slate-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    className={cn(
+                      'h-4 w-4 transition-transform',
+                      isModelSelected ? 'text-slate-500' : 'text-slate-400',
+                      isDropdownOpen && 'rotate-180'
+                    )}
                   />
                 </div>
               </Card>
