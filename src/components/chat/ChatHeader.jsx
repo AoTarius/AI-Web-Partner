@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, ChevronDown, Home, Utensils, Theater, Sparkles } from 'lucide-react'
+import { Menu, ChevronDown, Home, Utensils, Theater, Sparkles, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const MODEL_OPTIONS = [
+  { id: 'general', name: '通用大模型', icon: Bot },
   { id: 'meal-advisor', name: '一日三餐顾问', icon: Utensils },
   { id: 'roleplay', name: '角色扮演模型', icon: Theater },
 ]
