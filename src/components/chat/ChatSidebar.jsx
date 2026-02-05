@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useState, useEffect, useRef } from 'react'
 import { getConversations, deleteConversation, updateConversationTitle } from '@/lib/api'
 
-export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, onDeleteConversation, currentConversationId }) {
+export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConversation, onDeleteConversation, currentConversationId, refreshTrigger }) {
   const [hoveredItemId, setHoveredItemId] = useState(null)
   const [conversations, setConversations] = useState([])
   const [editingId, setEditingId] = useState(null)
@@ -106,12 +106,17 @@ export function ChatSidebar({ isOpen, onToggle, onNewConversation, onSelectConve
     return date.toLocaleDateString()
   }
 
+  // 初始化时加载对话列表
   useEffect(() => {
     loadConversations()
-    // 每5秒刷新一次列表
-    const interval = setInterval(loadConversations, 5000)
-    return () => clearInterval(interval)
   }, [])
+
+  // 当收到刷新信号时重新加载列表
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      loadConversations()
+    }
+  }, [refreshTrigger])
 
   return (
     <motion.aside

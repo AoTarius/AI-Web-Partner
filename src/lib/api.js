@@ -58,11 +58,11 @@ export async function createMessage(conversationId, role, content) {
 
 // ==================== AI 聊天 API ====================
 
-export async function sendChatMessage(conversationId, message) {
+export async function sendChatMessage(conversationId, message, role) {
   const response = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conversationId, message }),
+    body: JSON.stringify({ conversationId, message, role }),
   })
   if (!response.ok) throw new Error('发送聊天消息失败')
   return response.json()
@@ -80,11 +80,11 @@ export async function generateTitle(message) {
 }
 
 // 流式发送消息
-export async function sendChatMessageStream(conversationId, message, onChunk) {
+export async function sendChatMessageStream(conversationId, message, role, onChunk) {
   const response = await fetch(`${API_BASE}/chat/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conversationId, message }),
+    body: JSON.stringify({ conversationId, message, role }),
   })
 
   if (!response.ok) throw new Error('发送聊天消息失败')

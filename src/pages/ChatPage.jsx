@@ -17,8 +17,9 @@ export function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [messages, setMessages] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
-  const [currentModel, setCurrentModel] = useState('DeepSeek v1')
+  const [currentModel, setCurrentModel] = useState('一日三餐顾问')
   const [isLoading, setIsLoading] = useState(false)
+  const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0)
   const initialized = useRef(false)
 
   // 创建新对话
@@ -27,6 +28,8 @@ export function ChatPage() {
       const conversation = await createConversation('新对话')
       setCurrentConversationId(conversation.id)
       setMessages([])
+      // 通知侧边栏刷新列表
+      setSidebarRefreshTrigger((prev) => prev + 1)
     } catch (error) {
       console.error('创建对话失败:', error)
     }
@@ -100,6 +103,7 @@ export function ChatPage() {
       const finalContent = await sendChatMessageStream(
         conversationId,
         content,
+        currentModel,
         (partialContent) => {
           // 实时更新消息内容
           setMessages((prev) =>
@@ -131,6 +135,8 @@ export function ChatPage() {
         try {
           const { title } = await generateTitle(content)
           await updateConversationTitle(conversationId, title)
+          // 通知侧边栏刷新列表
+          setSidebarRefreshTrigger((prev) => prev + 1)
         } catch (error) {
           console.error('生成标题失败:', error)
         }
@@ -180,6 +186,7 @@ export function ChatPage() {
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
         currentConversationId={currentConversationId}
+        refreshTrigger={sidebarRefreshTrigger}
       />
 
       {/* 主内容区域 */}
@@ -188,7 +195,6 @@ export function ChatPage() {
         <ChatHeader
           currentModel={currentModel}
           onModelChange={setCurrentModel}
-          isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
