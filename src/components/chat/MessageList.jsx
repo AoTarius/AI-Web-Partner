@@ -3,20 +3,33 @@ import { Bot, User, Copy, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { TypingIndicator } from './TypingIndicator'
+import { ScrollToBottomButton } from './ScrollToBottomButton'
 
 export function MessageList({ messages, isLoading }) {
   const messagesEndRef = useRef(null)
+  const containerRef = useRef(null)
+  const [showScrollButton, setShowScrollButton] = useState(false)
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
+
+  // 检测滚动位置
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current
+    // 距离底部超过 100px 时显示按钮
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+    setShowScrollButton(!isNearBottom)
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
 
   // 切换对话时的加载状态（消息为空且正在加载）
   if (messages.length === 0 && isLoading) {
@@ -37,8 +50,18 @@ export function MessageList({ messages, isLoading }) {
         <div className="text-center space-y-4 max-w-md">
           <motion.div
             initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200 }}
+            animate={{
+              scale: 1,
+              y: [0, -8, 0],
+            }}
+            transition={{
+              scale: { type: 'spring', stiffness: 200 },
+              y: {
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }
+            }}
             className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center"
           >
             <Bot className="h-10 w-10 text-white" />
@@ -55,7 +78,11 @@ export function MessageList({ messages, isLoading }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="relative flex-1 overflow-y-auto px-4 py-6 space-y-6"
+    >
       {messages.map((message, index) => {
         // 只对最新5条消息使用动画，历史消息直接显示
         const isRecentMessage = index >= messages.length - 5
@@ -93,6 +120,8 @@ export function MessageList({ messages, isLoading }) {
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">
                   {message.content}
                 </p>
+              ) : message.id === 'streaming' && !message.content ? (
+                <TypingIndicator />
               ) : (
                 <div className="text-sm leading-relaxed text-slate-900 dark:text-slate-50 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-headings:my-3 prose-headings:font-semibold">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -145,6 +174,7 @@ export function MessageList({ messages, isLoading }) {
         )
       })}
       <div ref={messagesEndRef} />
+      <ScrollToBottomButton visible={showScrollButton} onClick={scrollToBottom} />
     </div>
   )
 }
