@@ -17,14 +17,17 @@ export function ChatInput({ onSendMessage }) {
     }
   }, [input])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (input.trim() && !isGenerating) {
-      onSendMessage(input.trim())
-      setInput('')
-      setIsGenerating(true)
-      // 模拟生成完成
-      setTimeout(() => setIsGenerating(false), 2000)
+      const success = await onSendMessage(input.trim())
+      // 只有成功发送才清空输入框
+      if (success !== false) {
+        setInput('')
+        setIsGenerating(true)
+        // 模拟生成完成
+        setTimeout(() => setIsGenerating(false), 2000)
+      }
     }
   }
 

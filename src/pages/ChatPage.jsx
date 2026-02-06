@@ -3,6 +3,7 @@ import { ChatSidebar } from '@/components/chat/ChatSidebar'
 import { ChatHeader } from '@/components/chat/ChatHeader'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
+import { ScrollToBottomButton } from '@/components/chat/ScrollToBottomButton'
 import {
   createConversation,
   createMessage,
@@ -21,7 +22,10 @@ export function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0)
   const [modelError, setModelError] = useState(false)
+  const [modelErrorTrigger, setModelErrorTrigger] = useState(0)
+  const [showScrollButton, setShowScrollButton] = useState(false)
   const initialized = useRef(false)
+  const messageListRef = useRef(null)
 
   // 创建新对话
   const handleNewConversation = async () => {
@@ -74,94 +78,111 @@ export function ChatPage() {
     setModelError(false)
   }
 
+  // 处理滚动到底部
+  const handleScrollToBottom = () => {
+    messageListRef.current?.scrollToBottom()
+  }
+
+  // 处理滚动状态变化
+  const handleScrollStateChange = (shouldShow) => {
+    setShowScrollButton(shouldShow)
+  }
+
   // 发送消息
   const handleSendMessage = async (content) => {
     // 检查是否选择了模型
     if (!currentModel) {
       setModelError(true)
-      return
+      setModelErrorTrigger(prev => prev + 1)
+      return false
     }
 
-    // 如果没有当前对话，先创建一个
-    let conversationId = currentConversationId
-    let isFirstMessage = false
-    if (!conversationId) {
-      const conversation = await createConversation('新对话')
-      conversationId = conversation.id
-      setCurrentConversationId(conversationId)
-      isFirstMessage = true
-    } else {
-      // 检查是否是第一条消息
-      isFirstMessage = messages.length === 0
-    }
-
-    try {
-      setIsLoading(true)
-
-      // 创建用户消息
-      const userMessage = await createMessage(conversationId, 'user', content)
-      setMessages((prev) => [...prev, userMessage])
-
-      // 创建一个临时的 AI 消息占位符
-      const tempAiMessage = {
-        id: 'streaming',
-        conversation_id: conversationId,
-        role: 'assistant',
-        content: '',
-        created_at: new Date().toISOString(),
+    // 模型已选择，可以清空输入框了
+    // 异步执行后续逻辑，不阻塞返回
+    ;(async () => {
+      // 如果没有当前对话，先创建一个
+      let conversationId = currentConversationId
+      let isFirstMessage = false
+      if (!conversationId) {
+        const conversation = await createConversation('新对话')
+        conversationId = conversation.id
+        setCurrentConversationId(conversationId)
+        isFirstMessage = true
+      } else {
+        // 检查是否是第一条消息
+        isFirstMessage = messages.length === 0
       }
-      setMessages((prev) => [...prev, tempAiMessage])
 
-      // 流式获取 AI 回复
-      const finalContent = await sendChatMessageStream(
-        conversationId,
-        content,
-        currentModel,
-        (partialContent) => {
-          // 实时更新消息内容
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === 'streaming'
-                ? { ...msg, content: partialContent }
-                : msg
+      try {
+        setIsLoading(true)
+
+        // 创建用户消息
+        const userMessage = await createMessage(conversationId, 'user', content)
+        setMessages((prev) => [...prev, userMessage])
+
+        // 创建一个临时的 AI 消息占位符
+        const tempAiMessage = {
+          id: 'streaming',
+          conversation_id: conversationId,
+          role: 'assistant',
+          content: '',
+          created_at: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, tempAiMessage])
+
+        // 流式获取 AI 回复
+        const finalContent = await sendChatMessageStream(
+          conversationId,
+          content,
+          currentModel,
+          (partialContent) => {
+            // 实时更新消息内容
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === 'streaming'
+                  ? { ...msg, content: partialContent }
+                  : msg
+              )
             )
-          )
-        }
-      )
-
-      // 保存完整的 AI 回复到数据库
-      const savedAiMessage = await createMessage(
-        conversationId,
-        'assistant',
-        finalContent
-      )
-
-      // 用数据库返回的消息替换临时消息
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === 'streaming' ? savedAiMessage : msg
+          }
         )
-      )
 
-      // 如果是第一条消息，自动生成对话标题
-      if (isFirstMessage) {
-        try {
-          const { title } = await generateTitle(content)
-          await updateConversationTitle(conversationId, title)
-          // 通知侧边栏刷新列表
-          setSidebarRefreshTrigger((prev) => prev + 1)
-        } catch (error) {
-          console.error('生成标题失败:', error)
+        // 保存完整的 AI 回复到数据库
+        const savedAiMessage = await createMessage(
+          conversationId,
+          'assistant',
+          finalContent
+        )
+
+        // 用数据库返回的消息替换临时消息
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === 'streaming' ? savedAiMessage : msg
+          )
+        )
+
+        // 如果是第一条消息，自动生成对话标题
+        if (isFirstMessage) {
+          try {
+            const { title } = await generateTitle(content)
+            await updateConversationTitle(conversationId, title)
+            // 通知侧边栏刷新列表
+            setSidebarRefreshTrigger((prev) => prev + 1)
+          } catch (error) {
+            console.error('生成标题失败:', error)
+          }
         }
+      } catch (error) {
+        console.error('发送消息失败:', error)
+        // 移除临时消息
+        setMessages((prev) => prev.filter((msg) => msg.id !== 'streaming'))
+        alert('发送消息失败，请检查 API 配置')
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('发送消息失败:', error)
-      // 移除临时消息
-      setMessages((prev) => prev.filter((msg) => msg.id !== 'streaming'))
-      alert('发送消息失败，请检查 API 配置')
-    } finally {
-      setIsLoading(false)
-    }
+    })()
+
+    return true
   }
 
   // 初始化：加载现有对话或创建新对话
@@ -210,11 +231,25 @@ export function ChatPage() {
           onModelChange={handleModelChange}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           hasError={modelError}
+          errorTrigger={modelErrorTrigger}
           onClearError={() => setModelError(false)}
         />
 
-        {/* 消息列表 */}
-        <MessageList messages={messages} isLoading={isLoading} />
+        {/* 消息列表容器 - 使用 relative 定位以便按钮固定在底部 */}
+        <div className="relative flex-1 overflow-hidden">
+          <MessageList
+            ref={messageListRef}
+            messages={messages}
+            isLoading={isLoading}
+            onScrollStateChange={handleScrollStateChange}
+          />
+
+          {/* 滚动到底部按钮 - 固定在消息列表底部 */}
+          <ScrollToBottomButton
+            visible={showScrollButton}
+            onClick={handleScrollToBottom}
+          />
+        </div>
 
         {/* 输入区域 */}
         <ChatInput onSendMessage={handleSendMessage} />

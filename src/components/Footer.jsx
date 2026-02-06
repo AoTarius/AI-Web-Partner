@@ -48,7 +48,9 @@ export function Footer() {
             </h3>
             <div className="flex gap-4">
               <a
-                href="#"
+                href="https://github.com/AoTarius/AI-Web-Partner"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:border-slate-900 hover:text-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:border-slate-50 dark:hover:text-slate-50"
               >
                 <Github className="h-5 w-5" />

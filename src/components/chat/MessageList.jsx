@@ -3,20 +3,23 @@ import { Bot, User, Copy, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { TypingIndicator } from './TypingIndicator'
-import { ScrollToBottomButton } from './ScrollToBottomButton'
 
-export function MessageList({ messages, isLoading }) {
+export const MessageList = forwardRef(function MessageList({ messages, isLoading, onScrollStateChange }, ref) {
   const messagesEndRef = useRef(null)
   const containerRef = useRef(null)
-  const [showScrollButton, setShowScrollButton] = useState(false)
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
+
+  // 暴露 scrollToBottom 方法给父组件
+  useImperativeHandle(ref, () => ({
+    scrollToBottom
+  }), [scrollToBottom])
 
   // 检测滚动位置
   const handleScroll = useCallback(() => {
@@ -24,8 +27,8 @@ export function MessageList({ messages, isLoading }) {
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current
     // 距离底部超过 100px 时显示按钮
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
-    setShowScrollButton(!isNearBottom)
-  }, [])
+    onScrollStateChange?.(!isNearBottom)
+  }, [onScrollStateChange])
 
   useEffect(() => {
     scrollToBottom()
@@ -34,7 +37,7 @@ export function MessageList({ messages, isLoading }) {
   // 切换对话时的加载状态（消息为空且正在加载）
   if (messages.length === 0 && isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="absolute inset-0 flex items-center justify-center p-8">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-violet-200 border-t-violet-600 mx-auto"></div>
           <p className="text-slate-600 dark:text-slate-400">加载对话中...</p>
@@ -46,7 +49,7 @@ export function MessageList({ messages, isLoading }) {
   // 空对话欢迎界面
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="absolute inset-0 flex items-center justify-center p-8">
         <div className="text-center space-y-4 max-w-md">
           <motion.div
             initial={{ scale: 0 }}
@@ -81,7 +84,7 @@ export function MessageList({ messages, isLoading }) {
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="relative flex-1 overflow-y-auto px-4 py-6 space-y-6"
+      className="absolute inset-0 overflow-y-auto px-4 py-6 space-y-6"
     >
       {messages.map((message, index) => {
         // 只对最新5条消息使用动画，历史消息直接显示
@@ -174,7 +177,6 @@ export function MessageList({ messages, isLoading }) {
         )
       })}
       <div ref={messagesEndRef} />
-      <ScrollToBottomButton visible={showScrollButton} onClick={scrollToBottom} />
     </div>
   )
-}
+})

@@ -12,7 +12,7 @@ const MODEL_OPTIONS = [
   { id: 'roleplay', name: '角色扮演模型', icon: Theater },
 ]
 
-export function ChatHeader({ currentModel, onModelChange, onToggleSidebar, hasError, onClearError }) {
+export function ChatHeader({ currentModel, onModelChange, onToggleSidebar, hasError, errorTrigger, onClearError }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
 
@@ -47,6 +47,7 @@ export function ChatHeader({ currentModel, onModelChange, onToggleSidebar, hasEr
           {/* 模型选择器 */}
           <div className="relative" ref={dropdownRef}>
             <motion.div
+              key={errorTrigger}
               whileHover={{ scale: 1.02 }}
               animate={hasError ? { x: [0, -4, 4, -4, 4, 0] } : {}}
               transition={hasError ? { duration: 0.4 } : {}}

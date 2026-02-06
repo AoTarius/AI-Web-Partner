@@ -18,7 +18,8 @@
       "Bash(npm run dev:server:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill -9)",
-      "Bash(jq:*)"
+      "Bash(jq:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }
