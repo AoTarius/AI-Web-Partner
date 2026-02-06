@@ -25,7 +25,7 @@ export function Header() {
             <Palette className="h-6 w-6 text-white" />
           </motion.div>
           <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
-            AI Partner
+            AI Web Partner
           </span>
         </Link>
 

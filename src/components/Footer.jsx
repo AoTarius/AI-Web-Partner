@@ -59,7 +59,7 @@ export function Footer() {
 
         <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-8 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400 md:flex-row">
           <p>
-            {currentYear} AI Partner Training. All rights reserved.
+            {currentYear} AI Web Partner Training. All rights reserved.
           </p>
           <div className="flex items-center gap-1">
             Made with <Heart className="h-4 w-4 fill-red-500 text-red-500" /> using Design System

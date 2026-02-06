@@ -34,16 +34,16 @@ npm run dev
 
 ## 系统角色配置
 
-当前使用的默认系统角色在 `server/index.js` 第 125 行：
+当前使用的角色在 `server/index.js`：
 
 ```javascript
 {
-  role: 'system',
-  content: 'You are a helpful AI assistant. 你是一个乐于助人的 AI 助手。'
+  role: '',
+  content: ''
 }
 ```
 
-你可以修改这个内容来自定义 AI 的行为，例如：
+可以修改这个内容来自定义 AI 的行为，例如：
 
 ```javascript
 // 数学老师

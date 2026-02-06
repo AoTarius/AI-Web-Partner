@@ -45,9 +45,9 @@ export function Hero() {
           </motion.div>
 
           <h1 className="mb-4 text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-6xl md:text-7xl">
-            AI Partner
+            AI Web Partner
             <span className="block bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
-              Training Platform
+              Communicating Platform
             </span>
           </h1>
 
